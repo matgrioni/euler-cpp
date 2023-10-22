@@ -7,7 +7,9 @@
 #include "31.hpp"
 #include "32.hpp"
 #include "Solver.hpp"
-#include "SolverRegistry.hpp"
+#include "KeyedSchemaFactory.hpp"
+
+using namespace euler;
 
 namespace
 {
@@ -23,6 +25,12 @@ namespace
             return in;
         }
     };
+
+    template <typename ParamKey>
+    void Test(ParamKey&& p_key)
+    {
+        static_assert(std::is_same_v<std::decay_t<ParamKey>, std::tuple<int&, double&>>);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -43,19 +51,21 @@ int main(int argc, char* argv[])
         }
     }
 
-    SolverRegistry<CinParameterResolver> registry;
-    registry.Add<Solver1_1>(1, "Signed Arithmetic", Param<uint64_t>("MultipleMax"));
-    registry.Add<Solver1_2>(1, "Arithmetic", Param<int64_t>("MultipleMax"));
-    registry.Add<Solver1_1>(1, "Project Euler", Literal<int64_t>(1000));
+    KeyedSchemaFactory<Key<uint32_t, std::string>, Solver, CinParameterResolver> registry;
+    registry.Add<Solver1_1>(ForwardKey(1, "Signed Arithmetic"), Param<uint64_t>("MultipleMax"))
+            .Add<Solver1_1>(ForwardKey(1, "Project Euler -- Signed Arithmetic"), Bind{ 1000ull })
+            .Add<Solver1_2>(ForwardKey(1, "Arithmetic"), Param<int64_t>("MultipleMax"));
 
-    registry.Add<Solver31_1>(31, "Main");
-    registry.Add<Solver32_1>(32, "Main");
+    registry.Add<Solver31_1>(ForwardKey(31, "Main"));
+
+    registry.Add<Solver32_1>(ForwardKey(32, "Main"));
 
     uint32_t solverId;
     std::cout << "Problem to solve: ";
     std::cin >> solverId;
 
-    auto names = registry.GetSolutionNamesForId(solverId);
+    std::vector<std::string> names;
+    registry.PartialMatch(ForwardKey(solverId), [&](auto, const std::string& p_name) { names.push_back(p_name);  });
     if (names.empty())
     {
         std::cout << "No solver exists for problem " << solverId << std::endl;
@@ -76,7 +86,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto solver = registry.GetSolver(solverId, names[solverNameId - 1]);
+    // It is guaranteed that the solver entry will be valid and found since the name is taken
+    // from the list of already registered names.
+    auto solver = registry.Create(ForwardKey(solverId, names[solverNameId - 1]));
 
     auto start = std::chrono::steady_clock::now();
     for (auto i = 0; i < 1000000; ++i)

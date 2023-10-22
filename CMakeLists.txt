@@ -12,7 +12,7 @@ endif()
 project ("euler-cpp")
 
 # Add source to this project's executable.
-add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp" "1.cpp")
+add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp" "1.cpp" "DynamicInteger.h")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET euler-cpp PROPERTY CXX_STANDARD 20)
