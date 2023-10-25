@@ -134,6 +134,11 @@ namespace euler
         void IterTuples(TFn&& p_fn, Tuples&&... p_tuples)
         {
             constexpr static auto DimCount = std::min({ std::tuple_size_v<std::decay_t<Tuples>>... });
+            if constexpr (DimCount == 0)
+            {
+                return;
+            }
+
             IterTuplesImpl<0, DimCount>(std::forward<TFn>(p_fn), std::forward<Tuples>(p_tuples)...);
         }
 
@@ -149,21 +154,21 @@ namespace euler
         template <auto Idx, auto Max, typename TFn, typename... Tuples>
         void IterTuplesImpl(TFn&& p_fn, Tuples&&... p_tuples)
         {
-            if constexpr (Idx < Max)
+            if constexpr (std::is_assignable_v<bool&, std::invoke_result_t<TFn&&, decltype(std::get<Idx>(std::forward<Tuples>(p_tuples)))...>>)
             {
-                if constexpr (std::is_assignable_v<bool&, std::invoke_result_t<TFn&&, decltype(std::get<Idx>(std::forward<Tuples>(p_tuples)))...>>)
+                bool continueIteration = std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
+                if (!continueIteration)
                 {
-                    bool continueIteration = std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
-                    if (!continueIteration)
-                    {
-                        return;
-                    }
+                    return;
                 }
-                else
-                {
-                    std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
-                }
+            }
+            else
+            {
+                std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
+            }
 
+            if constexpr ((Idx + 1) < Max)
+            {
                 IterTuplesImpl<Idx + 1, Max>(std::forward<TFn>(p_fn), std::forward<Tuples>(p_tuples)...);
             }
         }
@@ -257,7 +262,7 @@ namespace euler
         void PartialMatch(LookupKey&& p_key, TFn&& p_fn)
         {
             // Check that the provided key is actually of the appropriate size. If not, it cannot match.
-            if (std::tuple_size_v<LookupKey> > std::tuple_size_v<Key>)
+            if constexpr (std::tuple_size_v<LookupKey> > std::tuple_size_v<Key>)
             {
                 return;
             }
@@ -283,7 +288,7 @@ namespace euler
         {
             // The factory map considers partial keys as equal to the full key, so this is to protect against
             // a tuple that is a partial match of a key in the map from being considered found in the map.
-            if (std::tuple_size_v<LookupKey> != std::tuple_size_v<Key>)
+            if constexpr (std::tuple_size_v<LookupKey> != std::tuple_size_v<Key>)
             {
                 return {};
             }

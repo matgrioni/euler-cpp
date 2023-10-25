@@ -47,9 +47,8 @@ namespace
     template <typename Key, typename Base, typename ParameterResolver>
     void InitializeFactory(KeyedSchemaFactory<Key, Base, ParameterResolver>& p_factory)
     {
-        p_factory.Add<Solver1_1>(ForwardKey(1, "Signed Arithmetic"), Param<uint64_t>("MultipleMax"))
-                 .Add<Solver1_1>(ForwardKey(1, "Project Euler -- Signed Arithmetic"), Bind{ 1000ull })
-                 .Add<Solver1_2>(ForwardKey(1, "Arithmetic"), Param<int64_t>("MultipleMax"));
+        p_factory.Add<Solver1<int64_t>>(ForwardKey(1, "Unbound"), Param<uint64_t>("MultipleMax"))
+                 .Add<Solver1<int64_t>>(ForwardKey(1, "Project Euler -- Signed Arithmetic"), Bind{ 1000ull });
 
         p_factory.Add<Solver31_1>(ForwardKey(31, "Main"));
 
