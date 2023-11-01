@@ -2,10 +2,11 @@
 
 #include "Solver.hpp"
 
-class Solver32_1 : public ArithmeticSolver<uint64_t>
+namespace euler
 {
-public:
-    using ArithmeticSolver<uint64_t>::operator();
-
-    uint64_t DoSolve() override;
-};
+    class Solver32_1 : public Solver
+    {
+    public:
+        int64_t operator()() override;
+    };
+}

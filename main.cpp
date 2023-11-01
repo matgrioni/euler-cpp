@@ -47,8 +47,8 @@ namespace
     template <typename Key, typename Base, typename ParameterResolver>
     void InitializeFactory(KeyedSchemaFactory<Key, Base, ParameterResolver>& p_factory)
     {
-        p_factory.Add<Solver1<int64_t>>(ForwardKey(1, "Unbound"), Param<uint64_t>("MultipleMax"))
-                 .Add<Solver1<int64_t>>(ForwardKey(1, "Project Euler -- Signed Arithmetic"), Bind{ 1000ull });
+        p_factory.Add<Solver1>(ForwardKey(1, "Unbound"), Param<int64_t>("MultipleMax"))
+                 .Add<Solver1>(ForwardKey(1, "Project Euler"), Bind{ 1000ll });
 
         p_factory.Add<Solver31_1>(ForwardKey(31, "Main"));
 
@@ -140,7 +140,11 @@ int main(int argc, char* argv[])
     auto end = std::chrono::steady_clock::now();
     auto avg = (end - start) / static_cast<double>(runCount);
 
-    std::cout << std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(avg).count() << "us" << std::endl;
+    auto answer = (*solver)();
+
+    std::cout << "Final Answer: " << answer << std::endl;
+    std::cout << "Run Count: " << runCount << std::endl;
+    std::cout << "Average Runtime: " << avg << std::endl;
 
     return 0;
 }

@@ -9,14 +9,18 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
-add_compile_options(/w34365)
+add_compile_options(/W4)
+
+# These warning options also surface issues from the system headers which are undesirable in the normal build.
+# Only enable when doing in-depth linting.
+# add_compile_options(/w34365)
 
 project ("euler-cpp")
 
 add_subdirectory(deps/cxxopts)
 
 # Add source to this project's executable.
-add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp"  )
+add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp"   "1.cpp")
 
 target_include_directories(euler-cpp PRIVATE deps/cxxopts/include)
 

@@ -19,10 +19,11 @@
 
 namespace
 {
-    uint64_t DigitsToNumber(std::span<const uint8_t> p_digits)
+    template <typename T>
+    T DigitsToNumber(std::span<const uint8_t> p_digits)
     {
-        uint64_t result{};
-        uint64_t multiplier = 1;
+        T result{};
+        T multiplier = 1;
 
         for (auto reverseIt = p_digits.rbegin(); reverseIt != p_digits.rend(); ++reverseIt)
         {
@@ -33,7 +34,7 @@ namespace
         return result;
     }
 
-    std::vector<uint8_t> NumberToDigits(uint64_t p_number)
+    std::vector<uint8_t> NumberToDigits(int64_t p_number)
     {
         if (p_number == 0)
         {
@@ -52,42 +53,44 @@ namespace
     }
 }
 
-uint64_t Solver32_1::DoSolve()
+namespace euler
 {
-    std::array<uint8_t, 9> data{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    PermuteView<uint8_t> permuteView(data, 5);
-    std::unordered_set<uint64_t> pandigitalProducts;
-
-    do
+    int64_t Solver32_1::operator()()
     {
-        auto lhsDigits = permuteView.Current();
-        auto rhsDigits = permuteView.Hidden();
-        std::unordered_multiset<uint64_t> rhsDigitsSet(rhsDigits.begin(), rhsDigits.end());
+        std::array<uint8_t, 9> data{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        PermuteView<uint8_t> permuteView(data, 5);
+        std::unordered_set<int64_t> pandigitalProducts;
 
-        auto checkPandigitalAt = [&](std::size_t p_divisionPoint)
+        do
         {
-            auto a = DigitsToNumber(lhsDigits.subspan(0, p_divisionPoint));
-            auto b = DigitsToNumber(lhsDigits.subspan(p_divisionPoint));
-            auto product = a * b;
-            auto productDigits = NumberToDigits(product);
-            std::unordered_multiset<uint64_t> productDigitSet(productDigits.begin(), productDigits.end());
+            auto lhsDigits = permuteView.Current();
+            auto rhsDigits = permuteView.Hidden();
+            std::unordered_multiset<int64_t> rhsDigitsSet(rhsDigits.begin(), rhsDigits.end());
 
-            if (rhsDigitsSet == productDigitSet)
+            auto checkPandigitalAt = [&](std::size_t p_divisionPoint)
             {
-                pandigitalProducts.insert(product);
-            }
-        };
+                auto a = DigitsToNumber<int32_t>(lhsDigits.subspan(0, p_divisionPoint));
+                auto b = DigitsToNumber<int32_t>(lhsDigits.subspan(p_divisionPoint));
+                auto product = a * b;
+                auto productDigits = NumberToDigits(product);
+                std::unordered_multiset<int64_t> productDigitSet(productDigits.begin(), productDigits.end());
 
-        checkPandigitalAt(1);
-        checkPandigitalAt(2);
-    } while (permuteView.Advance());
+                if (rhsDigitsSet == productDigitSet)
+                {
+                    pandigitalProducts.insert(product);
+                }
+            };
 
-    uint64_t sum{};
-    for (auto product : pandigitalProducts)
-    {
-        sum += product;
+            checkPandigitalAt(1);
+            checkPandigitalAt(2);
+        } while (permuteView.Advance());
+
+        int64_t sum{};
+        for (auto product : pandigitalProducts)
+        {
+            sum += product;
+        }
+
+        return sum;
     }
-
-    return sum;
 }
-
