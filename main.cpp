@@ -6,12 +6,16 @@
 
 #include "1.hpp"
 #include "2.hpp"
+#include "3.hpp"
 #include "31.hpp"
 #include "32.hpp"
 #include "Solver.hpp"
 #include "KeyedSchemaFactory.hpp"
 
 #include "cxxopts.hpp"
+
+#include "Sieve.hpp"
+#include <vector>
 
 using namespace euler;
 
@@ -54,6 +58,8 @@ namespace
                  .Add<Solver2_1>(ForwardKey(2, "Naive -- Unbound"), Param<int64_t>("UpTo"))
                  .Add<Solver2_2>(ForwardKey(2, "Naive Optimized -- Project Euler"), Bind{ 4'000'000ll })
                  .Add<Solver2_2>(ForwardKey(2, "Naive Optimized -- Unbound"), Param<int64_t>("UpTo"))
+                 .Add<Solver3_1>(ForwardKey(3, "Sieve -- Project Euler"), Bind{ 600'851'475'143ll })
+                 .Add<Solver3_1>(ForwardKey(3, "Sieve -- Unbound"), Param<int64_t>("Factorize"))
                  .Add<Solver31_1>(ForwardKey(31, "Main"))
                  .Add<Solver32_1>(ForwardKey(32, "Main"));
     }
