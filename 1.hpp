@@ -18,6 +18,7 @@ namespace euler
         // Provide the actual solution.
         int64_t operator()() override;
     
+    private:
         // The maximum value to consider in the problem.
         int64_t m_max;
     };

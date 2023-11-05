@@ -143,14 +143,14 @@ namespace euler
         }
 
         /// <summary>
-        ///
+        /// Implementation helper for the IterTuples method which actually does recursion.
         /// </summary>
-        /// <typeparam name="TFn"></typeparam>
-        /// <typeparam name="...Tuples"></typeparam>
-        /// <typeparam name="Idx"></typeparam>
-        /// <typeparam name="Max"></typeparam>
-        /// <param name="p_fn"></param>
-        /// <param name="...p_tuples"></param>
+        /// <typeparam name="TFn">The type of the callable to use when iterating.</typeparam>
+        /// <typeparam name="...Tuples">The type list for the tuples to iterate over.</typeparam>
+        /// <typeparam name="Idx">The current index of the iteration.</typeparam>
+        /// <typeparam name="Max">The max index of the iteration. Idx will always be less than Max.</typeparam>
+        /// <param name="p_fn">The callable to invoke when iterating over the tuples.</param>
+        /// <param name="...p_tuples">The tuples to iterate over up to the size of the smallest one.</param>
         template <auto Idx, auto Max, typename TFn, typename... Tuples>
         void IterTuplesImpl(TFn&& p_fn, Tuples&&... p_tuples)
         {
@@ -193,7 +193,6 @@ namespace euler
     {
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
     }
-
 
     /// <summary>
     /// A KeyedSchemaFactory has three main parts to it. It is a factory (used to create object instances)

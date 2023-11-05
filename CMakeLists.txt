@@ -20,7 +20,7 @@ project ("euler-cpp")
 add_subdirectory(deps/cxxopts)
 
 # Add source to this project's executable.
-add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp"   "1.cpp")
+add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp"   "1.cpp" "2.cpp")
 
 target_include_directories(euler-cpp PRIVATE deps/cxxopts/include)
 

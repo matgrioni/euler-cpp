@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "1.hpp"
+#include "2.hpp"
 #include "31.hpp"
 #include "32.hpp"
 #include "Solver.hpp"
@@ -47,12 +48,14 @@ namespace
     template <typename Key, typename Base, typename ParameterResolver>
     void InitializeFactory(KeyedSchemaFactory<Key, Base, ParameterResolver>& p_factory)
     {
-        p_factory.Add<Solver1>(ForwardKey(1, "Unbound"), Param<int64_t>("MultipleMax"))
-                 .Add<Solver1>(ForwardKey(1, "Project Euler"), Bind{ 1000ll });
-
-        p_factory.Add<Solver31_1>(ForwardKey(31, "Main"));
-
-        p_factory.Add<Solver32_1>(ForwardKey(32, "Main"));
+        p_factory.Add<Solver1>(ForwardKey(1, "Project Euler"), Bind{ 1000ll })
+                 .Add<Solver1>(ForwardKey(1, "Unbound"), Param<int64_t>("MultipleMax"))
+                 .Add<Solver2_1>(ForwardKey(2, "Naive -- Project Euler"), Bind{ 4'000'000ll })
+                 .Add<Solver2_1>(ForwardKey(2, "Naive -- Unbound"), Param<int64_t>("UpTo"))
+                 .Add<Solver2_2>(ForwardKey(2, "Naive Optimized -- Project Euler"), Bind{ 4'000'000ll })
+                 .Add<Solver2_2>(ForwardKey(2, "Naive Optimized -- Unbound"), Param<int64_t>("UpTo"))
+                 .Add<Solver31_1>(ForwardKey(31, "Main"))
+                 .Add<Solver32_1>(ForwardKey(32, "Main"));
     }
 }
 
