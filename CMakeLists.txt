@@ -20,8 +20,11 @@ project ("euler-cpp")
 add_subdirectory(deps/cxxopts)
 
 # Add source to this project's executable.
-add_executable (euler-cpp "main.cpp" "31.cpp" "31.hpp" "32.cpp" "32.hpp" "PermuteView.hpp" "Solver.hpp" "1.hpp"   "1.cpp" "2.cpp" "3.cpp")
+add_executable (euler-cpp "main.cpp" "problems/src/31.cpp" "problems/src/32.cpp" "problems/src/1.cpp" "problems/src/2.cpp" "problems/src/3.cpp")
 
+target_sources(euler-cpp PRIVATE lib)
+target_include_directories(euler-cpp PRIVATE problems/inc)
+target_include_directories(euler-cpp PRIVATE lib/inc)
 target_include_directories(euler-cpp PRIVATE deps/cxxopts/include)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

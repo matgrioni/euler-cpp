@@ -9,12 +9,12 @@
 #include "3.hpp"
 #include "31.hpp"
 #include "32.hpp"
+#include "Sieve.hpp"
 #include "Solver.hpp"
 #include "KeyedSchemaFactory.hpp"
 
-#include "cxxopts.hpp"
+#include <cxxopts.hpp>
 
-#include "Sieve.hpp"
 #include <vector>
 
 using namespace euler;
