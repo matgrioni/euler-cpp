@@ -7,6 +7,7 @@
 #include "1.hpp"
 #include "2.hpp"
 #include "3.hpp"
+#include "4.hpp"
 #include "31.hpp"
 #include "32.hpp"
 #include "Sieve.hpp"
@@ -60,6 +61,8 @@ namespace
                  .Add<Solver2_2>(ForwardKey(2, "Naive Optimized -- Unbound"), Param<int64_t>("UpTo"))
                  .Add<Solver3_1>(ForwardKey(3, "Sieve -- Project Euler"), Bind{ 600'851'475'143ll })
                  .Add<Solver3_1>(ForwardKey(3, "Sieve -- Unbound"), Param<int64_t>("Factorize"))
+                 .Add<Solver4>(ForwardKey(4, "Project Euler"), Bind{ 3 })
+                 .Add<Solver4>(ForwardKey(4, "Unbound"), Param<int64_t>("Digits"))
                  .Add<Solver31_1>(ForwardKey(31, "Main"))
                  .Add<Solver32_1>(ForwardKey(32, "Main"));
     }
