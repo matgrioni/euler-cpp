@@ -1,4 +1,4 @@
-#include "31.hpp"
+#include "problems.hpp"
 
 #include <algorithm>
 #include <array>
@@ -21,7 +21,7 @@ namespace
 
 namespace euler
 {
-    int64_t Solver31_1::operator()()
+    int64_t P31()
     {
         constexpr std::array<int32_t, 8> denominations = { 1, 2, 5, 10, 20, 50, 100, 200 };
         constexpr int32_t c_desiredAmount = 200u;

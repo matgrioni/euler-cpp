@@ -1,19 +1,15 @@
-#include "2.hpp"
+#include "problems.hpp"
 
 namespace euler
 {
-    Solver2_1::Solver2_1(int64_t p_upTo)
-        : m_upTo(p_upTo)
-    { }
-
-    int64_t Solver2_1::operator()()
+    int64_t P2Naive(int64_t p_upTo)
     {
         int64_t a = 1;
         int64_t b = 2;
 
         int64_t sum{};
 
-        while (b < m_upTo)
+        while (b < p_upTo)
         {
             if (b % 2 == 0)
             {
@@ -28,11 +24,7 @@ namespace euler
         return sum;
     }
 
-    Solver2_2::Solver2_2(int64_t p_upTo)
-        : m_upTo(p_upTo)
-    { }
-
-    int64_t Solver2_2::operator()()
+    int64_t P2Optimization1(int64_t p_upTo)
     {
         int64_t a = 1;
         int64_t b = 2;
@@ -41,7 +33,7 @@ namespace euler
 
         // Only evens need to be summed, and evens occur in the fibonacci sequence
         // in the pattern of, e, o, o, e, o, o, e, ... So the evens can be determined directly.
-        while (b < m_upTo)
+        while (b < p_upTo)
         {
             sum += b;
 

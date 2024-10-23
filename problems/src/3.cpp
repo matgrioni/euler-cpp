@@ -1,4 +1,4 @@
-#include "3.hpp"
+#include "problems.hpp"
 
 #include "Sieve.hpp"
 
@@ -8,19 +8,15 @@
 
 namespace euler
 {
-	Solver3_1::Solver3_1(int64_t p_number)
-		: m_number(p_number)
-	{ }
-
-	int64_t Solver3_1::operator()()
+	int64_t P3(int64_t p_number)
 	{
-		auto lim = static_cast<int64_t>(std::sqrt(m_number)) + 1;
+		auto lim = static_cast<int64_t>(std::sqrt(p_number)) + 1;
 		std::vector<int64_t> primes;
 		sieve::Eratosthenes(primes, lim);
 
 		for (auto it = primes.crbegin(); it != primes.crend(); ++it)
 		{
-			if (m_number % *it == 0)
+			if (p_number % *it == 0)
 			{
 				return *it;
 			}

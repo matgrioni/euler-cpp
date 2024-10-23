@@ -6,12 +6,16 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "Collections.hpp"
+#include "Types.hpp"
 
 namespace euler
 {
@@ -54,33 +58,8 @@ namespace euler
 
     namespace detail
     {
-        /// <summary>
-        /// Implementation false case when checking if a class is an implementation of a template.
-        /// </summary>
-        /// <typeparam name="">Anonymous type in the false case.</typeparam>
-        template <typename, template <typename...> typename>
-        struct IsInstanceImpl : public std::false_type {};
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="...Ts"></typeparam>
-        template <template <typename...> typename U, typename...Ts>
-        struct IsInstanceImpl<U<Ts...>, U> : public std::true_type {};
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        template <typename T, template <typename ...> typename U>
-        using IsInstance = IsInstanceImpl<std::remove_cvref_t<T>, U>;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        template <typename T, template <typename ...> typename U>
-        constexpr bool IsInstanceV = IsInstance<T, U>::value;
+        template <typename Fn, typename... SchemaSpecs>
+        using SchemaExecResultT = std::invoke_result_t<Fn, typename SchemaSpecs::Type...>;
 
         /// <summary>
         /// 
@@ -91,18 +70,21 @@ namespace euler
         /// <param name="p_resolver"></param>
         /// <param name="...p_schemaSpecs"></param>
         /// <returns></returns>
-        template <typename T, typename ParameterResolver, typename... SchemaSpecs>
-        std::function<std::unique_ptr<T>()> CreateSchemaFactory(ParameterResolver& p_resolver, SchemaSpecs&&... p_schemaSpecs)
+        template <typename ParameterResolver, typename Fn, typename... SchemaSpecs>
+        auto CreateExecutable(
+            ParameterResolver& p_resolver,
+            Fn&& p_fn,
+            SchemaSpecs&&... p_schemaSpecs) -> std::function<SchemaExecResultT<Fn, SchemaSpecs...>()>
         {
             if constexpr (sizeof...(p_schemaSpecs) == 0)
             {
-                return std::make_unique<T>;
+                return std::forward<Fn>(p_fn);
             }
             else
             {
                 auto resolve = [&p_resolver](auto&& p_spec) -> decltype(auto)
                 {
-                    if constexpr (IsInstanceV<decltype(p_spec), Bind>)
+                    if constexpr (mg::is_instance_v<decltype(p_spec), Bind>)
                     {
                         return p_spec.m_value;
                     }
@@ -112,64 +94,15 @@ namespace euler
                     }
                 };
 
-                auto factory = [&resolve, ...specs = std::forward<SchemaSpecs>(p_schemaSpecs)]() mutable -> std::unique_ptr<T>
+                auto exec = [
+                    resolve,
+                    fn = std::forward<Fn>(p_fn),
+                    ...specs = std::forward<SchemaSpecs>(p_schemaSpecs)]() mutable -> SchemaExecResultT<Fn, SchemaSpecs...>
                 {
-                    return std::make_unique<T>(resolve(specs)...);
+                    return fn(resolve(specs)...);
                 };
 
-                return factory;
-            }
-        }
-
-        /// <summary>
-        /// Iterate in parallel over the elements in a defined set of tuples. Iteration stops
-        /// with the shortest tuple.
-        /// </summary>
-        /// <typeparam name="TFn">The type of the callable to invoke.</typeparam>
-        /// <typeparam name="...Tuples">The set of tuples to iterate over.</typeparam>
-        /// <param name="p_fn">The callable to invoke over the tuples. Will have one argument in parallel
-        /// for each tuple.</param>
-        /// <param name="...p_tuples">The tuples to iterate over.</param>
-        template <typename TFn, typename... Tuples>
-        void IterTuples(TFn&& p_fn, Tuples&&... p_tuples)
-        {
-            constexpr static auto DimCount = std::min({ std::tuple_size_v<std::decay_t<Tuples>>... });
-            if constexpr (DimCount == 0)
-            {
-                return;
-            }
-
-            IterTuplesImpl<0, DimCount>(std::forward<TFn>(p_fn), std::forward<Tuples>(p_tuples)...);
-        }
-
-        /// <summary>
-        /// Implementation helper for the IterTuples method which actually does recursion.
-        /// </summary>
-        /// <typeparam name="TFn">The type of the callable to use when iterating.</typeparam>
-        /// <typeparam name="...Tuples">The type list for the tuples to iterate over.</typeparam>
-        /// <typeparam name="Idx">The current index of the iteration.</typeparam>
-        /// <typeparam name="Max">The max index of the iteration. Idx will always be less than Max.</typeparam>
-        /// <param name="p_fn">The callable to invoke when iterating over the tuples.</param>
-        /// <param name="...p_tuples">The tuples to iterate over up to the size of the smallest one.</param>
-        template <auto Idx, auto Max, typename TFn, typename... Tuples>
-        void IterTuplesImpl(TFn&& p_fn, Tuples&&... p_tuples)
-        {
-            if constexpr (std::is_assignable_v<bool&, std::invoke_result_t<TFn&&, decltype(std::get<Idx>(std::forward<Tuples>(p_tuples)))...>>)
-            {
-                bool continueIteration = std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
-                if (!continueIteration)
-                {
-                    return;
-                }
-            }
-            else
-            {
-                std::invoke(p_fn, std::get<Idx>(std::forward<Tuples>(p_tuples))...);
-            }
-
-            if constexpr ((Idx + 1) < Max)
-            {
-                IterTuplesImpl<Idx + 1, Max>(std::forward<TFn>(p_fn), std::forward<Tuples>(p_tuples)...);
+                return exec;
             }
         }
     }
@@ -187,65 +120,94 @@ namespace euler
     /// </summary>
     /// <typeparam name="...Ts">The types of the parameters that are forwarded.</typeparam>
     /// <param name="...p_ts">The heterogenous list of parameters to use for lookup.</param>
-    /// <returns></returns>
+    /// <returns>The arguments perfectly forwarded and packed in a tuple.</returns>
     template <typename... Ts>
-    decltype(auto) ForwardKey(Ts&&... p_ts) noexcept
+    decltype(auto) K(Ts&&... p_ts) noexcept
     {
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
     }
 
+    template <typename... Ts>
+    decltype(auto) S(Ts&&... p_ts) noexcept
+    {
+        return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
+    }
+
+    template <typename T>
+    struct DynamicRegistration{};
+
     /// <summary>
-    /// A KeyedSchemaFactory has three main parts to it. It is a factory (used to create object instances)
-    /// that is schema based (information is provided on how to create an individual object), and the schemas
-    /// are associated with a specific key.
+    /// The idea behind a KeyedSchemaRouter is to use a key which is associated with some schema whose parameters are
+    /// fixed at compile time or resolved dynamically according to some policy. This combination of key and schema is
+    /// then associated with some executable code which this will route to as necessary.
     /// </summary>
     /// <typeparam name="Key">The key type that the different schema are stored under.</typeparam>
-    /// <typeparam name="Base">The base type that this factory is for. All instances created by the factory should be a subclass of this.</typeparam>
+    /// <typeparam name="R">The type that this router will return when its keyed logic is executed.</typeparam>
     /// <typeparam name="ParameterResolver">The type of object that is used to resolve unbound parameters.</typeparam>
-    template <typename Key, typename Base, typename ParameterResolver>
-    class KeyedSchemaFactory
+    template <typename Key, typename R, typename ParameterResolver, template <typename> typename RegistrationPolicy = DynamicRegistration>
+    class KeyedSchemaRouter
     {
     public:
         /// <summary>
-        /// Create a new KeyedSchemaFactory with the resolver provided.
+        /// Create a new KeyedSchemaRouter with the resolver provided.
         /// </summary>
-        /// <param name="p_resolver">The resolver to use for unbound parameter.</param>
-        KeyedSchemaFactory(const ParameterResolver& p_resolver = ParameterResolver())
+        /// <param name="p_resolver">The resolver to use for unbound parameters.</param>
+        KeyedSchemaRouter(const ParameterResolver& p_resolver = ParameterResolver())
             : m_resolver(p_resolver)
         { }
 
         /// <summary>
-        /// Add (register) a new type on this factory. The registration must create a subtype of the type the overall
-        /// factory is for. This adds an association between the provided key and the specified schema for the creation
-        /// of the concrete type.
+        /// Add (register) a new function on this router. This adds an association between the provided key and the
+        /// specified schema for the creation of the concrete type.
         /// </summary>
-        /// <typeparam name="Concrete">The specific type this is adding to the factory.</typeparam>
         /// <typeparam name="LookupKey">The key to add this schema instance under.</typeparam>
+        /// <typeparam name="Fn">The function that this is routing to.</typeparam>
         /// <typeparam name="...SchemaSpecs">The types of the parameters that define the schema.</typeparam>
         /// <param name="p_key">The actual key instance to add an entry for.</param>
         /// <param name="...p_schemaSpecs">The different schema specifications (one of Param, Bind, etc) which
         /// detail how this type should be created at runtime for this key.</param>
-        /// <returns>This factory instance to allow for a builder interface.</returns>
-        template <typename Concrete, typename LookupKey, typename... SchemaSpecs>
-        KeyedSchemaFactory& Add(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
+        /// <returns>This router instance to allow for a builder interface.</returns>
+        template <typename LookupKey, typename Fn, typename... SchemaSpecs>
+        KeyedSchemaRouter& Add(LookupKey&& p_key, Fn&& p_fn, SchemaSpecs&&... p_schemaSpecs)
         {
-            auto factory = detail::CreateSchemaFactory<Concrete>(m_resolver, std::forward<SchemaSpecs>(p_schemaSpecs)...);
+            auto exec = detail::CreateExecutable(
+                m_resolver,
+                std::forward<Fn>(p_fn),
+                std::forward<SchemaSpecs>(p_schemaSpecs)...);
 
             // Use emplace over try_emplace for the following reasons:
-            //   * Insertion failures are expected to be very rare and cause an exception anyway so the cost of
-            //     construction in this case is an acceptable tradeoff.
-            //   * This allows for immovable and uncopyable types to be used in the key and passed through directly
-            //     during construction.
-            auto [_, inserted] = m_factories.emplace(
+            //   * Insertion failures are expected to be very rare and cause an exception anyway so the unnecessary cost
+            //     of construction in this case is acceptable.
+            //   * This allows for immovable and uncopyable types to be used in the key and to be directly constructed
+            //     in-place in the map.
+            auto [_, inserted] = m_execs.emplace(
                 std::piecewise_construct,
                 std::forward<LookupKey>(p_key),
-                std::forward_as_tuple(std::move(factory)));
+                std::forward_as_tuple(std::move(exec)));
             if (!inserted)
             {
-                throw std::runtime_error("Factory already exists with the given key.");
+                throw std::runtime_error("Key already exists on the router.");
             }
 
             return *this;
+        }
+
+        template <typename T, typename LookupKey, typename... SchemaSpecs>
+        KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
+        {
+            return Add(
+                std::forward<LookupKey>(p_key),
+                RegistrationPolicy<T>{},
+                std::forward<SchemaSpecs>(p_schemaSpecs)...);
+        }
+
+        template <auto V, typename LookupKey, typename... SchemaSpecs>
+        KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
+        {
+            return Add(
+                std::forward<LookupKey>(p_key),
+                RegistrationPolicy<V>{},
+                std::forward<SchemaSpecs>(p_schemaSpecs)...);
         }
 
         /// <summary>
@@ -266,7 +228,7 @@ namespace euler
                 return;
             }
 
-            auto [start, end] = m_factories.equal_range(std::forward<LookupKey>(p_key));
+            auto [start, end] = m_execs.equal_range(std::forward<LookupKey>(p_key));
 
             for (auto it = start; it != end; ++it)
             {
@@ -275,30 +237,30 @@ namespace euler
         }
 
         /// <summary>
-        /// Creates an instance of the type using the factory registered under the given key. The lookup key is
-        /// heterogenous and comparisons will be done transparently at a per element level. If the key does not
-        /// exist then, an empty object is returned. Otherwise, the result of calling the factory is returned.
+        /// Route to an executable instance previously registered. The lookup key is heterogenous and comparisons will
+        /// be done transparently at a per element level. If the key does not exist then an exception is thrown.
+        /// Otherwise, the executable logic is returned.
         /// </summary>
         /// <typeparam name="LookupKey">The type of the passed in key. Should not usually need to be specified.</typeparam>
-        /// <param name="p_key">The key to use for looking up the registered factory.</param>
-        /// <returns>Any instance created by the factory if it was found via the key.</returns>
+        /// <param name="p_key">The key to use for looking up the registered executable.</param>
+        /// <returns>The executable logic that this key routes to.</returns>
         template <typename LookupKey>
-        std::unique_ptr<Base> Create(LookupKey&& p_key)
+        std::function<R()> Route(LookupKey&& p_key)
         {
-            // The factory map considers partial keys as equal to the full key, so this is to protect against
+            // The executable map considers partial keys as equal to the full key, so this is to protect against
             // a tuple that is a partial match of a key in the map from being considered found in the map.
             if constexpr (std::tuple_size_v<LookupKey> != std::tuple_size_v<Key>)
             {
-                return {};
+                throw std::runtime_error("The executable could not be found for the given key.");
             }
 
-            auto it = m_factories.find(std::forward<LookupKey>(p_key));
-            if (it == m_factories.end())
+            auto it = m_execs.find(std::forward<LookupKey>(p_key));
+            if (it == m_execs.end())
             {
-                return {};
+                throw std::runtime_error("The executable could not be found for the given key.");
             }
 
-            return (it->second)();
+            return it->second;
         }
 
     private:
@@ -329,7 +291,7 @@ namespace euler
             bool operator()(T1&& p_t1, T2&& p_t2) const
             {
                 bool lt = false;
-                detail::IterTuples(
+                mg::iter_zipped_tuples(
                     [&](auto&& p_lhs, auto&& p_rhs)
                     {
                         using U1 = decltype(p_lhs);
@@ -370,21 +332,20 @@ namespace euler
         };
 
         /// <summary>
-        /// The instance that is responsible for resolving unbound parameters in the factory.
+        /// The instance that is responsible for resolving unbound parameters in the executables.
         /// </summary>
         ParameterResolver m_resolver;
 
         /// <summary>
-        /// The storage for the factories. A map is used to allow for ordering of the factories
+        /// The storage for the executables. A map is used to allow for ordering of the executables
         /// based on their Key, which will allow for partial lookup later. It does come at a slight
         /// inefficiency if the full key is known compared to an unordered_map, however for this toy
         /// example it is fine and illustrates the partial lookup solution.
         /// </summary>
         std::map<
             Key,
-            std::function<std::unique_ptr<Base>()>,
-            HeterogenousTupleLess> m_factories;
+            std::function<R()>,
+            HeterogenousTupleLess> m_execs;
     };
-
 }
 
