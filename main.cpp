@@ -39,23 +39,18 @@ namespace
         }
     };
 
-    template <typename T>
     struct ExecuteRegistration
     {
-        template <typename... Ts>
+        template <typename T, typename... Ts>
         auto operator()(Ts&&... p_ts)
         {
             return T{}(std::forward<Ts>(p_ts)...);
         }
-    };
 
-    template <auto F>
-    struct Func
-    {
-        template <typename... Ts>
-        decltype(auto) operator()(Ts&&... p_ts)
+        template <auto V, typename... Ts>
+        auto operator()(Ts&&... p_ts)
         {
-            return F(std::forward<Ts>(p_ts)...);
+            return V(std::forward<Ts>(p_ts)...);
         }
     };
 
@@ -69,24 +64,18 @@ namespace
     void InitializeRouter(KeyedSchemaRouter<Key, R, ParameterResolver, ExecuteRegistration>& p_router)
     {
         p_router
-            .Register<Func<P1>>(K(1, "Project Euler"), Bind{ 1000ll })
-            .Register<Func<P1>>(K(1, "Unbound"), Param<int64_t>("MultipleMax"));
-
-        /*
-        p_router
-            .Add(ForwardKey(1, "Project Euler"), &P1, Bind{ 1000ll })
-            .Add(ForwardKey(1, "Unbound"), &P1, Param<int64_t>("MultipleMax"))
-            .Add(ForwardKey(2, "Naive -- Project Euler"), &P2Naive, Bind{ 4'000'000ll })
-            .Add(ForwardKey(2, "Naive -- Unbound"), &P2Naive, Param<int64_t>("UpTo"))
-            .Add(ForwardKey(2, "Naive Optimized -- Project Euler"), &P2Optimization1, Bind{ 4'000'000ll })
-            .Add(ForwardKey(2, "Naive Optimized -- Unbound"), &P2Optimization1, Param<int64_t>("UpTo"))
-            .Add(ForwardKey(3, "Sieve -- Project Euler"), &P3, Bind{ 600'851'475'143ll })
-            .Add(ForwardKey(3, "Sieve -- Unbound"), &P3, Param<int64_t>("Factorize"))
-            .Add(ForwardKey(4, "Project Euler"), &P4, Bind{ 3 })
-            .Add(ForwardKey(4, "Unbound"), &P4, Param<int64_t>("Digits"))
-            .Add(ForwardKey(31, "Main"), &P31)
-            .Add(ForwardKey(32, "Main"), &P32);
-            */
+            .Register<P1>(K(1, "Project Euler"), Bind{ 1000ll })
+            .Register<P1>(K(1, "Unbound"), Param<int64_t>("MultipleMax"))
+            .Register<P2Naive>(K(2, "Naive -- Project Euler"), Bind{ 4'000'000ll })
+            .Register<P2Naive>(K(2, "Naive -- Unbound"), Param<int64_t>("UpTo"))
+            .Register<P2Optimization1>(K(2, "Naive Optimized -- Project Euler"), Bind{ 4'000'000ll })
+            .Register<P2Optimization1>(K(2, "Naive Optimized -- Unbound"), Param<int64_t>("UpTo"))
+            .Register<P3>(K(3, "Sieve -- Project Euler"), Bind{ 600'851'475'143ll })
+            .Register<P3>(K(3, "Sieve -- Unbound"), Param<int64_t>("Factorize"))
+            .Register<P4>(K(4, "Project Euler"), Bind{ 3 })
+            .Register<P4>(K(4, "Unbound"), Param<int64_t>("Digits"))
+            .Register<P31>(K(31, "Main"))
+            .Register<P31>(K(32, "Main"));
     }
 }
 

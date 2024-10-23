@@ -133,7 +133,6 @@ namespace euler
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
     }
 
-    template <typename T>
     struct DynamicRegistration{};
 
     /// <summary>
@@ -144,7 +143,7 @@ namespace euler
     /// <typeparam name="Key">The key type that the different schema are stored under.</typeparam>
     /// <typeparam name="R">The type that this router will return when its keyed logic is executed.</typeparam>
     /// <typeparam name="ParameterResolver">The type of object that is used to resolve unbound parameters.</typeparam>
-    template <typename Key, typename R, typename ParameterResolver, template <typename> typename RegistrationPolicy = DynamicRegistration>
+    template <typename Key, typename R, typename ParameterResolver, typename RegistrationPolicy = DynamicRegistration>
     class KeyedSchemaRouter
     {
     public:
@@ -195,18 +194,30 @@ namespace euler
         template <typename T, typename LookupKey, typename... SchemaSpecs>
         KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
         {
+            auto curried = [](auto&&... p_ts)
+			{
+                RegistrationPolicy policy{};
+                return policy.template operator()<T>(std::forward<decltype(p_ts)>(p_ts)...);
+			};
+
             return Add(
                 std::forward<LookupKey>(p_key),
-                RegistrationPolicy<T>{},
+                curried,
                 std::forward<SchemaSpecs>(p_schemaSpecs)...);
         }
 
         template <auto V, typename LookupKey, typename... SchemaSpecs>
         KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
         {
+            auto curried = [](auto&&... p_ts)
+			{
+                RegistrationPolicy policy{};
+                return policy.template operator()<V>(std::forward<decltype(p_ts)>(p_ts)...);
+			};
+
             return Add(
                 std::forward<LookupKey>(p_key),
-                RegistrationPolicy<V>{},
+                curried,
                 std::forward<SchemaSpecs>(p_schemaSpecs)...);
         }
 
