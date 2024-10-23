@@ -39,14 +39,8 @@ namespace
         }
     };
 
-    struct ExecuteRegistration
+    struct StaticExecutor
     {
-        template <typename T, typename... Ts>
-        auto operator()(Ts&&... p_ts)
-        {
-            return T{}(std::forward<Ts>(p_ts)...);
-        }
-
         template <auto V, typename... Ts>
         auto operator()(Ts&&... p_ts)
         {
@@ -54,14 +48,15 @@ namespace
         }
     };
 
+    using SolutionRouter = KeyedSchemaRouter<Key<uint32_t, std::string>, int64_t, CinParameterResolver, StaticExecutor>;
+
     /// <summary>
     /// 
     /// </summary>
     /// <typeparam name="Key"></typeparam>
     /// <typeparam name="ParameterResolver"></typeparam>
     /// <param name="p_factory"></param>
-    template <typename Key, typename R, typename ParameterResolver>
-    void InitializeRouter(KeyedSchemaRouter<Key, R, ParameterResolver, ExecuteRegistration>& p_router)
+    void InitializeRouter(SolutionRouter& p_router)
     {
         p_router
             .Register<P1>(K(1, "Project Euler"), Bind{ 1000ll })
@@ -93,7 +88,7 @@ int main(int argc, char* argv[])
     options.allow_unrecognised_options();
     auto optionsResult = options.parse(argc, argv);
 
-    KeyedSchemaRouter<Key<uint32_t, std::string>, int64_t, CinParameterResolver, ExecuteRegistration> router;
+    SolutionRouter router;
     InitializeRouter(router);
 
     uint32_t solverId;

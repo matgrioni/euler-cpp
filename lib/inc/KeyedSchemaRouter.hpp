@@ -133,7 +133,7 @@ namespace euler
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
     }
 
-    struct DynamicRegistration{};
+    struct Dynamic{};
 
     /// <summary>
     /// The idea behind a KeyedSchemaRouter is to use a key which is associated with some schema whose parameters are
@@ -143,7 +143,7 @@ namespace euler
     /// <typeparam name="Key">The key type that the different schema are stored under.</typeparam>
     /// <typeparam name="R">The type that this router will return when its keyed logic is executed.</typeparam>
     /// <typeparam name="ParameterResolver">The type of object that is used to resolve unbound parameters.</typeparam>
-    template <typename Key, typename R, typename ParameterResolver, typename RegistrationPolicy = DynamicRegistration>
+    template <typename Key, typename R, typename ParameterResolver, typename Registrar = Dynamic>
     class KeyedSchemaRouter
     {
     public:
@@ -151,8 +151,11 @@ namespace euler
         /// Create a new KeyedSchemaRouter with the resolver provided.
         /// </summary>
         /// <param name="p_resolver">The resolver to use for unbound parameters.</param>
-        KeyedSchemaRouter(const ParameterResolver& p_resolver = ParameterResolver())
-            : m_resolver(p_resolver)
+        KeyedSchemaRouter(
+            const ParameterResolver& p_resolver = ParameterResolver(),
+            const Registrar& p_registrar = Registrar())
+            : m_resolver(p_resolver),
+              m_registrar(p_registrar)
         { }
 
         /// <summary>
@@ -194,11 +197,10 @@ namespace euler
         template <typename T, typename LookupKey, typename... SchemaSpecs>
         KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
         {
-            auto curried = [](auto&&... p_ts)
-			{
-                RegistrationPolicy policy{};
-                return policy.template operator()<T>(std::forward<decltype(p_ts)>(p_ts)...);
-			};
+            auto curried = [this](auto&&... p_ts)
+            {
+                return m_registrar.template operator()<T>(std::forward<decltype(p_ts)>(p_ts)...);
+            };
 
             return Add(
                 std::forward<LookupKey>(p_key),
@@ -209,11 +211,10 @@ namespace euler
         template <auto V, typename LookupKey, typename... SchemaSpecs>
         KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
         {
-            auto curried = [](auto&&... p_ts)
-			{
-                RegistrationPolicy policy{};
-                return policy.template operator()<V>(std::forward<decltype(p_ts)>(p_ts)...);
-			};
+            auto curried = [this](auto&&... p_ts)
+            {
+                return m_registrar.template operator()<V>(std::forward<decltype(p_ts)>(p_ts)...);
+            };
 
             return Add(
                 std::forward<LookupKey>(p_key),
@@ -346,6 +347,11 @@ namespace euler
         /// The instance that is responsible for resolving unbound parameters in the executables.
         /// </summary>
         ParameterResolver m_resolver;
+
+        /// <summary>
+        /// The instance that is responsible for mapping static registration calls into a final callable.
+        /// </summary>
+        Registrar m_registrar;
 
         /// <summary>
         /// The storage for the executables. A map is used to allow for ordering of the executables
