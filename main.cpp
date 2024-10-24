@@ -59,18 +59,25 @@ namespace
     void InitializeRouter(SolutionRouter& p_router)
     {
         p_router
-            .Register<P1>(K(1, "Project Euler"), S(1000ll))
-            .Register<P1>(K(1, "Unbound"), S(Param<int64_t>("MultipleMax")))
-            .Register<P2Naive>(K(2, "Naive -- Project Euler"), S(4'000'000ll))
-            .Register<P2Naive>(K(2, "Naive -- Unbound"), S(Param<int64_t>("UpTo")))
-            .Register<P2Optimization1>(K(2, "Naive Optimized -- Project Euler"), S(4'000'000ll))
-            .Register<P2Optimization1>(K(2, "Naive Optimized -- Unbound"), S(Param<int64_t>("UpTo")))
-            .Register<P3>(K(3, "Sieve -- Project Euler"), S(600'851'475'143ll))
-            .Register<P3>(K(3, "Sieve -- Unbound"), S(Param<int64_t>("Factorize")))
-            .Register<P4>(K(4, "Project Euler"), S(3))
-            .Register<P4>(K(4, "Unbound"), S(Param<int64_t>("Digits")))
-            .Register<P31>(K(31, "Main"))
-            .Register<P31>(K(32, "Main"));
+            .Register<P1>(
+                K(1, "Project Euler"), S(1000ll),
+                K(1, "Unbound"), S(Param<int64_t>("MultipleMax")))
+            .Register<P2Naive>(
+                K(2, "Naive -- Project Euler"), S(4'000'000ll),
+                K(2, "Naive -- Unbound"), S(Param<int64_t>("UpTo")))
+            .Register<P2Optimization1>(
+                K(2, "Naive Optimized -- Project Euler"), S(4'000'000ll),
+                K(2, "Naive Optimized -- Unbound"), S(Param<int64_t>("UpTo")))
+            .Register<P3>(
+                K(3, "Sieve -- Project Euler"), S(600'851'475'143ll),
+                K(3, "Sieve -- Unbound"), S(Param<int64_t>("Factorize")))
+            .Register<P4>(
+                K(4, "Project Euler"), S(3),
+                K(4, "Unbound"), S(Param<int64_t>("Digits")))
+            .Register<P31>(
+                K(31, "Main"), S())
+            .Register<P32>(
+                K(32, "Main"), S());
     }
 }
 

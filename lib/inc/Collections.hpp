@@ -77,6 +77,18 @@ namespace mg
         return detail::iter_zipped_tuples_impl<0, DimCount>(std::forward<Fn>(p_fn), std::forward<Tuples>(p_tuples)...);
     }
 
+    /// <summary>
+    /// Apply a callable to all members of a tuple resulting in a new tuple.
+    /// </summary>
+    /// <remarks>This method will take the value category of p_tuple into account when passing arguments to the callable
+    /// but the returned value is created with the same semantics as make_tuple. This means that if one of the tuple
+    /// element types should be an l-value reference, then a reference_wrapper should be returned. If the type should be
+    /// an r-value reference, use another library, because I don't know how to do that or if that would be safe.</remarks>
+    /// <typeparam name="Tuple">The type of the tuple being mapped.</typeparam>
+    /// <typeparam name="Fn">The type of the callable being applied.</typeparam>
+    /// <param name="p_tuple">The tuple being mapped.</param>
+    /// <param name="p_fn">The callable being applied to each tuple element.</param>
+    /// <returns>The mapped tuple.</returns>
     template <typename Fn, typename Tuple>
     auto tuple_map(Tuple&& p_tuple, Fn&& p_fn)
     {
@@ -84,5 +96,21 @@ namespace mg
             std::forward<Tuple>(p_tuple),
             std::forward<Fn>(p_fn),
             std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
+    }
+
+    template <std::size_t N, typename Fn, typename... Ts>
+    void static_grouped_for_each(Fn&& p_fn, Ts&&... p_ts)
+    {
+        if (sizeof...(p_ts) == 0)
+        {
+            return;
+        }
+
+        auto impl = [&](auto& p_impl, auto&& p_ts)
+		{
+            iter_n<N>(p_fn, p_impl, std::forward<decltype(p_ts)>(p_ts));
+		};
+
+        impl(impl, std::forward<Ts>(p_ts)...);
     }
 }

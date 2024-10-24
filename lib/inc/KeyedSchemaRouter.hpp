@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "Collections.hpp"
+#include "Functional.hpp"
 #include "Types.hpp"
 
 namespace euler
@@ -130,14 +131,31 @@ namespace euler
     /// A helper function to help with grouping key elements for the KeyedSchemaRouter. This perfectly forwards the keys
     /// which allows for efficient operations.
     /// </summary>
-    /// <remarks>The type of the return value is implementation defined and should not be relied on.</remarks>
+    /// <remarks>The type of the return value is implementation defined and should not be relied on. It is also expected
+    /// that this type is only used directly in parameters since it is forwarding. To create a stored key for later use
+    /// or simply if perfect forwarding is not necessary use the K method.</remarks>
     /// <typeparam name="...Ts">The types of the parameters that are forwarded.</typeparam>
     /// <param name="...p_ts">The heterogenous list of parameters to group.</param>
     /// <returns>The arguments perfectly forwarded and packed in a implementation defined value.</returns>
     template <typename... Ts>
-    decltype(auto) K(Ts&&... p_ts) noexcept
+    decltype(auto) FK(Ts&&... p_ts) noexcept
     {
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
+    }
+
+    /// <summary>
+    /// A helper function to help with grouping key elements for the KeyedSchemaRouter. This method allows for storage
+    /// of the key values.
+    /// </summary>
+    /// <remarks>The type of the return value is implementation defined and should not be relied on. As opposed to FK,
+    /// the values from this method can be stored without much extra thought as to references.</remarks>
+    /// <typeparam name="...Ts">The types of the parameters that are forwarded.</typeparam>
+    /// <param name="...p_ts">The heterogenous list of parameters to group.</param>
+    /// <returns>The arguments used to construct an implementation defined value.</returns>
+    template <typename... Ts>
+    decltype(auto) K(Ts&&... p_ts) noexcept
+    {
+        return std::make_tuple(std::forward<Ts>(p_ts)...);
     }
 
     /// <summary>
@@ -151,11 +169,11 @@ namespace euler
     decltype(auto) S(Ts&&... p_ts) noexcept
     {
         auto convert = [](auto&& p_atom)
-		{
+        {
             using Atom = std::remove_cvref_t<decltype(p_atom)>;
-			constexpr bool knownAtom =
-				mg::is_instance_v<Atom, Param> ||
-				mg::is_instance_v<Atom, Bind>;
+            constexpr bool knownAtom =
+                mg::is_instance_v<Atom, Param> ||
+                mg::is_instance_v<Atom, Bind>;
             if constexpr (knownAtom)
             {
                 return p_atom;
@@ -164,7 +182,7 @@ namespace euler
             {
                 return Bind<Atom>{ std::forward<decltype(p_atom)>(p_atom) };
             }
-		};
+        };
 
         return std::make_tuple(convert(std::forward<Ts>(p_ts))...);
     }
@@ -231,44 +249,42 @@ namespace euler
             return *this;
         }
 
-        template <typename T, typename LookupKey, typename Schema>
-        KeyedSchemaRouter& Register(LookupKey&& p_key, Schema&& p_schema)
+        template <typename T, typename... Ts>
+        KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
-            auto curried = [this](auto&&... p_ts)
-            {
-                return m_registrar.template operator()<T>(std::forward<decltype(p_ts)>(p_ts)...);
-            };
+            mg::iter_n<2>([this](auto&& p_key, auto&& p_schema)
+			{
+				auto curried = [this](auto&&... p_args)
+				{
+					return m_registrar.template operator()<T>(std::forward<decltype(p_args)>(p_args)...);
+				};
 
-            return Add(
-                std::forward<LookupKey>(p_key),
-                curried,
-                std::forward<Schema>(p_schema));
+				Add(
+					std::forward<decltype(p_key)>(p_key),
+					curried,
+					std::forward<decltype(p_schema)>(p_schema));
+			}, std::forward<Ts>(p_ts)...);
+
+            return *this;
         }
 
-        template <typename T, typename LookupKey>
-        KeyedSchemaRouter& Register(LookupKey&& p_key)
+        template <auto V, typename... Ts>
+        KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
-            return Register(std::forward<LookupKey>(p_key), S());
-        }
+            mg::iter_n<2>([this](auto&& p_key, auto&& p_schema)
+			{
+				auto curried = [this](auto&&... p_args)
+				{
+					return m_registrar.template operator()<V>(std::forward<decltype(p_args)>(p_args)...);
+				};
 
-        template <auto V, typename LookupKey, typename Schema>
-        KeyedSchemaRouter& Register(LookupKey&& p_key, Schema&& p_schema)
-        {
-            auto curried = [this](auto&&... p_ts)
-            {
-                return m_registrar.template operator()<V>(std::forward<decltype(p_ts)>(p_ts)...);
-            };
+				Add(
+					std::forward<decltype(p_key)>(p_key),
+					curried,
+					std::forward<decltype(p_schema)>(p_schema));
+			}, std::forward<Ts>(p_ts)...);
 
-            return Add(
-                std::forward<LookupKey>(p_key),
-                curried,
-                std::forward<Schema>(p_schema));
-        }
-
-        template <auto V, typename LookupKey>
-        KeyedSchemaRouter& Register(LookupKey&& p_key)
-        {
-            return Register<V>(std::forward<LookupKey>(p_key), S());
+            return *this;
         }
 
         /// <summary>
