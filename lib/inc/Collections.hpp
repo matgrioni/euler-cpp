@@ -97,20 +97,4 @@ namespace mg
             std::forward<Fn>(p_fn),
             std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
     }
-
-    template <std::size_t N, typename Fn, typename... Ts>
-    void static_grouped_for_each(Fn&& p_fn, Ts&&... p_ts)
-    {
-        if (sizeof...(p_ts) == 0)
-        {
-            return;
-        }
-
-        auto impl = [&](auto& p_impl, auto&& p_ts)
-		{
-            iter_n<N>(p_fn, p_impl, std::forward<decltype(p_ts)>(p_ts));
-		};
-
-        impl(impl, std::forward<Ts>(p_ts)...);
-    }
 }

@@ -20,24 +20,17 @@
 
 namespace euler
 {
-    /// <summary>
-    /// A dynamically resolved parameter in a schema.
-    /// </summary>
-    /// <typeparam name="T">The type of the parameter.</typeparam>
-    template <typename T>
-    struct Param 
+    namespace detail
     {
-        /// <summary>
-        /// Exposes the type that this parameter is for.
-        /// </summary>
-        using Type = T;
-
-        /// <summary>
-        /// The name of the parameter. The name is used for dynamic resolution by the
-        /// ParameterResolver.
-        /// </summary>
-        std::string m_name;
-    };
+		template <typename Idx>
+        struct BoundFromKey : Idx
+        {
+            /// <summary>
+            /// Type alias used for things to compile but not valid to be used otherwise.
+            /// </summary>
+            using Type = void;
+        };
+    }
 
     /// <summary>
     /// A parameter in the schema which is already bound.
@@ -57,21 +50,46 @@ namespace euler
         T m_value;
     };
 
+    template <std::size_t Idx>
+    using FromKey = detail::BoundFromKey<std::integral_constant<std::size_t, Idx>>;
+
+    /// <summary>
+    /// A dynamically resolved parameter in a schema.
+    /// </summary>
+    /// <typeparam name="T">The type of the parameter.</typeparam>
+    template <typename T>
+    struct Param 
+    {
+        /// <summary>
+        /// Exposes the type that this parameter is for.
+        /// </summary>
+        using Type = T;
+
+        /// <summary>
+        /// The name of the parameter. The name is used for dynamic resolution by the
+        /// ParameterResolver.
+        /// </summary>
+        std::string m_name;
+    };
+
     namespace detail
     {
-        template <typename Schema, std::size_t... I>
+        template <typename Key, typename Schema, std::size_t... I>
         auto DeschemifyImpl(std::integer_sequence<std::size_t, I...>)
-            -> std::tuple<typename std::remove_cvref_t<std::tuple_element_t<I, Schema>>::Type...>;
+            -> std::tuple<std::conditional_t<
+                   mg::is_instance_v<std::remove_cvref_t<std::tuple_element_t<I, Schema>>, detail::BoundFromKey>,
+                   std::remove_cvref_t<std::tuple_element_t<I, Key>>,
+                   typename std::remove_cvref_t<std::tuple_element_t<I, Schema>>::Type>...>;
 
-        template <typename Schema>
+        template <typename Key, typename Schema>
         auto Deschemify()
-            -> decltype(DeschemifyImpl<std::remove_cvref_t<Schema>>(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Schema>>>{}));
+            -> decltype(DeschemifyImpl<Key, std::remove_cvref_t<Schema>>(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Schema>>>{}));
 
-        template <typename Fn, typename Schema>
+        template <typename Fn, typename Key, typename Schema>
         using SchemaExecResult = decltype(
             std::apply(
                 std::declval<Fn>(),
-                std::declval<decltype(Deschemify<Schema>())>()));
+                std::declval<decltype(Deschemify<Key, Schema>())>()));
 
         /// <summary>
         /// 
@@ -82,11 +100,12 @@ namespace euler
         /// <param name="p_resolver"></param>
         /// <param name="...p_schemaSpecs"></param>
         /// <returns></returns>
-        template <typename ParameterResolver, typename Fn, typename Schema>
+        template <typename ParameterResolver, typename Key, typename Fn, typename Schema>
         auto CreateExecutable(
             ParameterResolver& p_resolver,
+            const Key& p_key,
             Fn&& p_fn,
-            Schema&& p_schema) -> std::function<SchemaExecResult<Fn, Schema>()>
+            Schema&& p_schema) -> std::function<SchemaExecResult<Fn, Key, Schema>()>
         {
             // Use decltype instead of Schema so that warning about not using p_schema is avoided.
             if constexpr (std::tuple_size_v<std::remove_cvref_t<decltype(p_schema)>> == 0)
@@ -95,11 +114,16 @@ namespace euler
             }
             else
             {
-                auto resolve = [&p_resolver](auto&& p_spec) -> decltype(auto)
+                auto resolve = [&p_resolver, &p_key](auto&& p_spec) -> decltype(auto)
                 {
-                    if constexpr (mg::is_instance_v<decltype(p_spec), Bind>)
+                    using Spec = std::remove_reference_t<decltype(p_spec)>;
+                    if constexpr (mg::is_instance_v<Spec, Bind>)
                     {
                         return p_spec.m_value;
+                    }
+                    else if constexpr (mg::is_instance_v<Spec, detail::BoundFromKey>)
+                    {
+                        return std::ref(std::get<Spec::value>(p_key));
                     }
                     else
                     {
@@ -110,7 +134,7 @@ namespace euler
                 auto exec = [
                     resolve,
                     fn = std::forward<Fn>(p_fn),
-                    schema = std::forward<Schema>(p_schema)]() -> SchemaExecResult<Fn, Schema>
+                    schema = std::forward<Schema>(p_schema)]() -> SchemaExecResult<Fn, Key, Schema>
                 {
                     return std::apply(fn, mg::tuple_map(schema, resolve));
                 };
@@ -171,10 +195,11 @@ namespace euler
         auto convert = [](auto&& p_atom)
         {
             using Atom = std::remove_cvref_t<decltype(p_atom)>;
-            constexpr bool knownAtom =
-                mg::is_instance_v<Atom, Param> ||
-                mg::is_instance_v<Atom, Bind>;
-            if constexpr (knownAtom)
+            constexpr bool validAtom =
+                mg::is_instance_v<Atom, Bind> ||
+                mg::is_instance_v<Atom, detail::BoundFromKey> ||
+                mg::is_instance_v<Atom, Param>;
+            if constexpr (validAtom)
             {
                 return p_atom;
             }
@@ -227,24 +252,28 @@ namespace euler
         template <typename LookupKey, typename Fn, typename Schema>
         KeyedSchemaRouter& Add(LookupKey&& p_key, Fn&& p_fn, Schema&& p_schema)
         {
-            auto exec = detail::CreateExecutable(
-                m_resolver,
-                std::forward<Fn>(p_fn),
-                std::forward<Schema>(p_schema));
-
             // Use emplace over try_emplace for the following reasons:
             //   * Insertion failures are expected to be very rare and cause an exception anyway so the unnecessary cost
             //     of construction in this case is acceptable.
             //   * This allows for immovable and uncopyable types to be used in the key and to be directly constructed
             //     in-place in the map.
-            auto [_, inserted] = m_execs.emplace(
+            // Also first create the entry and then create the executable so that schemas that rely on a value from the
+            // key can reference a value stored directly on the router.
+            auto [it, inserted] = m_execs.emplace(
                 std::piecewise_construct,
                 std::forward<LookupKey>(p_key),
-                std::forward_as_tuple(std::move(exec)));
+                std::forward_as_tuple());
             if (!inserted)
             {
                 throw std::runtime_error("Key already exists on the router.");
             }
+
+            auto exec = detail::CreateExecutable(
+                m_resolver,
+                it->first,
+                std::forward<Fn>(p_fn),
+                std::forward<Schema>(p_schema));
+            it->second = std::move(exec);
 
             return *this;
         }
@@ -300,7 +329,7 @@ namespace euler
         void PartialMatch(LookupKey&& p_key, TFn&& p_fn)
         {
             // Check that the provided key is actually of the appropriate size. If not, it cannot match.
-            if constexpr (std::tuple_size_v<LookupKey> > std::tuple_size_v<Key>)
+            if constexpr (std::tuple_size_v<std::remove_cvref_t<LookupKey>> > std::tuple_size_v<Key>)
             {
                 return;
             }
