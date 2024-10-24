@@ -22,7 +22,7 @@ namespace euler
 {
     namespace detail
     {
-		template <typename Idx>
+        template <typename Idx>
         struct BoundFromKey : Idx
         {
             /// <summary>
@@ -282,17 +282,17 @@ namespace euler
         KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
             mg::iter_n<2>([this](auto&& p_key, auto&& p_schema)
-			{
-				auto curried = [this](auto&&... p_args)
-				{
-					return m_registrar.template operator()<T>(std::forward<decltype(p_args)>(p_args)...);
-				};
+            {
+                auto curried = [this](auto&&... p_args)
+                {
+                    return m_registrar.template operator()<T>(std::forward<decltype(p_args)>(p_args)...);
+                };
 
-				Add(
-					std::forward<decltype(p_key)>(p_key),
-					curried,
-					std::forward<decltype(p_schema)>(p_schema));
-			}, std::forward<Ts>(p_ts)...);
+                Add(
+                    std::forward<decltype(p_key)>(p_key),
+                    curried,
+                    std::forward<decltype(p_schema)>(p_schema));
+            }, std::forward<Ts>(p_ts)...);
 
             return *this;
         }
@@ -301,17 +301,17 @@ namespace euler
         KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
             mg::iter_n<2>([this](auto&& p_key, auto&& p_schema)
-			{
-				auto curried = [this](auto&&... p_args)
-				{
-					return m_registrar.template operator()<V>(std::forward<decltype(p_args)>(p_args)...);
-				};
+            {
+                auto curried = [this](auto&&... p_args)
+                {
+                    return m_registrar.template operator()<V>(std::forward<decltype(p_args)>(p_args)...);
+                };
 
-				Add(
-					std::forward<decltype(p_key)>(p_key),
-					curried,
-					std::forward<decltype(p_schema)>(p_schema));
-			}, std::forward<Ts>(p_ts)...);
+                Add(
+                    std::forward<decltype(p_key)>(p_key),
+                    curried,
+                    std::forward<decltype(p_schema)>(p_schema));
+            }, std::forward<Ts>(p_ts)...);
 
             return *this;
         }

@@ -21,14 +21,14 @@ add_subdirectory(deps/cxxopts)
 
 # Add source to this project's executable.
 add_executable (
-	euler-cpp
-	"main.cpp"
-	"problems/src/1.cpp"
-	"problems/src/2.cpp"
-	"problems/src/3.cpp"
-	"problems/src/4.cpp"
-	"problems/src/31.cpp"
-	"problems/src/32.cpp")
+    euler-cpp
+    "main.cpp"
+    "problems/src/1.cpp"
+    "problems/src/2.cpp"
+    "problems/src/3.cpp"
+    "problems/src/4.cpp"
+    "problems/src/31.cpp"
+    "problems/src/32.cpp")
 
 target_sources(euler-cpp PRIVATE lib)
 target_include_directories(euler-cpp PRIVATE problems/inc)
