@@ -46,6 +46,12 @@ namespace mg
                 return true;
             }
         }
+
+        template <typename Fn, typename Tuple, std::size_t... I>
+        auto tuple_map_impl(Tuple&& p_tuple, Fn&& p_fn, std::index_sequence<I...>)
+        {
+            return std::make_tuple(p_fn(std::get<I>(std::forward<Tuple>(p_tuple)))...);
+        }
     }
 
     /// <summary>
@@ -53,14 +59,14 @@ namespace mg
     /// smallest tuple is reached. Additionally, the callable signature may return a bool which can be used to signal
     /// whether iteration is to continue.
     /// </summary>
-    /// <typeparam name="TFn">The type of the callable to invoke.</typeparam>
+    /// <typeparam name="Fn">The type of the callable to invoke.</typeparam>
     /// <typeparam name="...Tuples">The set of tuples to iterate over.</typeparam>
     /// <param name="p_fn">The callable to invoke over the tuples. Will have one argument in parallel for each tuple
     /// and can signal to stop iteration by returning false.</param>
     /// <param name="...p_tuples">The tuples to iterate over.</param>
     /// <returns>False if the callable signaled iteration to stop and true otherwise.</returns>
-    template <typename TFn, typename... Tuples>
-    bool iter_zipped_tuples(TFn&& p_fn, Tuples&&... p_tuples)
+    template <typename Fn, typename... Tuples>
+    bool iter_zipped_tuples(Fn&& p_fn, Tuples&&... p_tuples)
     {
         constexpr static std::size_t DimCount = std::min({ std::tuple_size_v<std::remove_cvref_t<Tuples>>... });
         if constexpr (DimCount == 0)
@@ -68,6 +74,15 @@ namespace mg
             return true;
         }
 
-        return detail::iter_zipped_tuples_impl<0, DimCount>(std::forward<TFn>(p_fn), std::forward<Tuples>(p_tuples)...);
+        return detail::iter_zipped_tuples_impl<0, DimCount>(std::forward<Fn>(p_fn), std::forward<Tuples>(p_tuples)...);
+    }
+
+    template <typename Fn, typename Tuple>
+    auto tuple_map(Tuple&& p_tuple, Fn&& p_fn)
+    {
+        return detail::tuple_map_impl(
+            std::forward<Tuple>(p_tuple),
+            std::forward<Fn>(p_fn),
+            std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
     }
 }

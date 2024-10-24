@@ -58,8 +58,19 @@ namespace euler
 
     namespace detail
     {
-        template <typename Fn, typename... SchemaSpecs>
-        using SchemaExecResultT = std::invoke_result_t<Fn, typename SchemaSpecs::Type...>;
+        template <typename Schema, std::size_t... I>
+        auto DeschemifyImpl(std::integer_sequence<std::size_t, I...>)
+            -> std::tuple<typename std::remove_cvref_t<std::tuple_element_t<I, Schema>>::Type...>;
+
+        template <typename Schema>
+        auto Deschemify()
+            -> decltype(DeschemifyImpl<std::remove_cvref_t<Schema>>(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Schema>>>{}));
+
+        template <typename Fn, typename Schema>
+        using SchemaExecResult = decltype(
+            std::apply(
+                std::declval<Fn>(),
+                std::declval<decltype(Deschemify<Schema>())>()));
 
         /// <summary>
         /// 
@@ -70,13 +81,14 @@ namespace euler
         /// <param name="p_resolver"></param>
         /// <param name="...p_schemaSpecs"></param>
         /// <returns></returns>
-        template <typename ParameterResolver, typename Fn, typename... SchemaSpecs>
+        template <typename ParameterResolver, typename Fn, typename Schema>
         auto CreateExecutable(
             ParameterResolver& p_resolver,
             Fn&& p_fn,
-            SchemaSpecs&&... p_schemaSpecs) -> std::function<SchemaExecResultT<Fn, SchemaSpecs...>()>
+            Schema&& p_schema) -> std::function<SchemaExecResult<Fn, Schema>()>
         {
-            if constexpr (sizeof...(p_schemaSpecs) == 0)
+            // Use decltype instead of Schema so that warning about not using p_schema is avoided.
+            if constexpr (std::tuple_size_v<std::remove_cvref_t<decltype(p_schema)>> == 0)
             {
                 return std::forward<Fn>(p_fn);
             }
@@ -97,9 +109,9 @@ namespace euler
                 auto exec = [
                     resolve,
                     fn = std::forward<Fn>(p_fn),
-                    ...specs = std::forward<SchemaSpecs>(p_schemaSpecs)]() mutable -> SchemaExecResultT<Fn, SchemaSpecs...>
+                    schema = std::forward<Schema>(p_schema)]() -> SchemaExecResult<Fn, Schema>
                 {
-                    return fn(resolve(specs)...);
+                    return std::apply(fn, mg::tuple_map(schema, resolve));
                 };
 
                 return exec;
@@ -115,22 +127,30 @@ namespace euler
     using Key = std::tuple<Ts...>;
 
     /// <summary>
-    /// A helper function to help with lookup on KeyedSchemaFactory. This will perfectly forward the parameters
-    /// to the lookup which may allow for more efficient lookup.
+    /// A helper function to help with grouping key elements for the KeyedSchemaRouter. This perfectly forwards the keys
+    /// which allows for efficient operations.
     /// </summary>
+    /// <remarks>The type of the return value is implementation defined and should not be relied on.</remarks>
     /// <typeparam name="...Ts">The types of the parameters that are forwarded.</typeparam>
-    /// <param name="...p_ts">The heterogenous list of parameters to use for lookup.</param>
-    /// <returns>The arguments perfectly forwarded and packed in a tuple.</returns>
+    /// <param name="...p_ts">The heterogenous list of parameters to group.</param>
+    /// <returns>The arguments perfectly forwarded and packed in a implementation defined value.</returns>
     template <typename... Ts>
     decltype(auto) K(Ts&&... p_ts) noexcept
     {
         return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
     }
 
+    /// <summary>
+    /// A helper function to help with marking the schema on KeyedSchemaRouter operations.
+    /// </summary>
+    /// <remarks>The type of the return value is implementation defined and should not be relied on.</remarks>
+    /// <typeparam name="...Ts">The type schema clauses that are grouped together.</typeparam>
+    /// <param name="...p_ts">The heterogenous set of schema clauses to group.</param>
+    /// <returns>A object that represents the given schema definition.</returns>
     template <typename... Ts>
     decltype(auto) S(Ts&&... p_ts) noexcept
     {
-        return std::forward_as_tuple(std::forward<Ts>(p_ts)...);
+        return std::make_tuple(std::forward<Ts>(p_ts)...);
     }
 
     struct Dynamic{};
@@ -148,9 +168,10 @@ namespace euler
     {
     public:
         /// <summary>
-        /// Create a new KeyedSchemaRouter with the resolver provided.
+        /// Create a new KeyedSchemaRouter.
         /// </summary>
         /// <param name="p_resolver">The resolver to use for unbound parameters.</param>
+        /// <param name="p_registrar">The registrar instance to use.</param>
         KeyedSchemaRouter(
             const ParameterResolver& p_resolver = ParameterResolver(),
             const Registrar& p_registrar = Registrar())
@@ -169,13 +190,13 @@ namespace euler
         /// <param name="...p_schemaSpecs">The different schema specifications (one of Param, Bind, etc) which
         /// detail how this type should be created at runtime for this key.</param>
         /// <returns>This router instance to allow for a builder interface.</returns>
-        template <typename LookupKey, typename Fn, typename... SchemaSpecs>
-        KeyedSchemaRouter& Add(LookupKey&& p_key, Fn&& p_fn, SchemaSpecs&&... p_schemaSpecs)
+        template <typename LookupKey, typename Fn, typename Schema>
+        KeyedSchemaRouter& Add(LookupKey&& p_key, Fn&& p_fn, Schema&& p_schema)
         {
             auto exec = detail::CreateExecutable(
                 m_resolver,
                 std::forward<Fn>(p_fn),
-                std::forward<SchemaSpecs>(p_schemaSpecs)...);
+                std::forward<Schema>(p_schema));
 
             // Use emplace over try_emplace for the following reasons:
             //   * Insertion failures are expected to be very rare and cause an exception anyway so the unnecessary cost
@@ -194,8 +215,8 @@ namespace euler
             return *this;
         }
 
-        template <typename T, typename LookupKey, typename... SchemaSpecs>
-        KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
+        template <typename T, typename LookupKey, typename Schema>
+        KeyedSchemaRouter& Register(LookupKey&& p_key, Schema&& p_schema)
         {
             auto curried = [this](auto&&... p_ts)
             {
@@ -205,11 +226,17 @@ namespace euler
             return Add(
                 std::forward<LookupKey>(p_key),
                 curried,
-                std::forward<SchemaSpecs>(p_schemaSpecs)...);
+                std::forward<Schema>(p_schema));
         }
 
-        template <auto V, typename LookupKey, typename... SchemaSpecs>
-        KeyedSchemaRouter& Register(LookupKey&& p_key, SchemaSpecs&&... p_schemaSpecs)
+        template <typename T, typename LookupKey>
+        KeyedSchemaRouter& Register(LookupKey&& p_key)
+        {
+            return Register(std::forward<LookupKey>(p_key), S());
+        }
+
+        template <auto V, typename LookupKey, typename Schema>
+        KeyedSchemaRouter& Register(LookupKey&& p_key, Schema&& p_schema)
         {
             auto curried = [this](auto&&... p_ts)
             {
@@ -219,7 +246,13 @@ namespace euler
             return Add(
                 std::forward<LookupKey>(p_key),
                 curried,
-                std::forward<SchemaSpecs>(p_schemaSpecs)...);
+                std::forward<Schema>(p_schema));
+        }
+
+        template <auto V, typename LookupKey>
+        KeyedSchemaRouter& Register(LookupKey&& p_key)
+        {
+            return Register<V>(std::forward<LookupKey>(p_key), S());
         }
 
         /// <summary>
