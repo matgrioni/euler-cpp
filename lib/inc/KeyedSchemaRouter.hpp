@@ -150,7 +150,23 @@ namespace euler
     template <typename... Ts>
     decltype(auto) S(Ts&&... p_ts) noexcept
     {
-        return std::make_tuple(std::forward<Ts>(p_ts)...);
+        auto convert = [](auto&& p_atom)
+		{
+            using Atom = std::remove_cvref_t<decltype(p_atom)>;
+			constexpr bool knownAtom =
+				mg::is_instance_v<Atom, Param> ||
+				mg::is_instance_v<Atom, Bind>;
+            if constexpr (knownAtom)
+            {
+                return p_atom;
+            }
+            else
+            {
+                return Bind<Atom>{ std::forward<decltype(p_atom)>(p_atom) };
+            }
+		};
+
+        return std::make_tuple(convert(std::forward<Ts>(p_ts))...);
     }
 
     struct Dynamic{};
