@@ -8,7 +8,7 @@
 // multiplier. Multiply them and decompose the result into the digit list, and which point it can be
 // compared with the left over numbers.
 
-#include "32.hpp"
+#include "problems.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -55,7 +55,7 @@ namespace
 
 namespace euler
 {
-    int64_t Solver32_1::operator()()
+    int64_t P32()
     {
         std::array<uint8_t, 9> data{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
         PermuteView<uint8_t> permuteView(data, 5);
