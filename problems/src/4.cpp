@@ -1,6 +1,6 @@
 #include "problems.hpp"
 
-#include "Math.hpp"
+#include <mg/math.hpp>
 
 #include <algorithm>
 #include <array>
@@ -49,7 +49,7 @@ namespace euler
 {
     int64_t P4(int64_t p_digits)
     {
-        auto limit = Exp(10ll, p_digits);
+        auto limit = mg::whole_pow(10ll, p_digits);
 
         int64_t maxPalindrome = 0;
         for (int64_t first = 0; first < limit; ++first)

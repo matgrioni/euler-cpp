@@ -14,9 +14,9 @@
 #include <utility>
 #include <vector>
 
-#include "Collections.hpp"
-#include "Functional.hpp"
-#include "Types.hpp"
+#include <mg/collections.hpp>
+#include <mg/functional.hpp>
+#include <mg/types.hpp>
 
 namespace euler
 {
