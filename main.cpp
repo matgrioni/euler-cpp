@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         std::cin >> solverId;
 
         std::vector<const std::string*> names;
-        router.PartialMatch(K(solverId), [&](uint32_t, const std::string& p_name) { names.push_back(&p_name);  });
+        router.PartialMatch(K(solverId), [&](uint32_t, const std::string& p_name) { names.push_back(&p_name); });
         if (names.empty())
         {
             std::cout << "No solver exists for problem " << solverId << std::endl;
