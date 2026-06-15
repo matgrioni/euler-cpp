@@ -24,7 +24,7 @@ namespace euler
         return sum;
     }
 
-    int64_t P2Optimization1(int64_t p_upTo)
+    int64_t P2Optimization(int64_t p_upTo)
     {
         int64_t a = 1;
         int64_t b = 2;

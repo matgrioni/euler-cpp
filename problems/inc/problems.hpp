@@ -12,7 +12,7 @@ namespace euler
     int64_t P1(int64_t p_max);
 
     int64_t P2Naive(int64_t p_upTo);
-    int64_t P2Optimization1(int64_t p_upTo);
+    int64_t P2Optimization(int64_t p_upTo);
 
     int64_t P3(int64_t p_number);
 

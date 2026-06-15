@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "problems.hpp"
 #include "Sieve.hpp"
@@ -11,7 +12,6 @@
 
 #include <cxxopts.hpp>
 
-#include <vector>
 
 using namespace euler;
 
@@ -65,7 +65,7 @@ namespace
             .Register<P2Naive>(
                 K(2, "Naive -- Project Euler"), S(4'000'000ll),
                 K(2, "Naive -- Unbound"), S(Param<int64_t>("UpTo")))
-            .Register<P2Optimization1>(
+            .Register<P2Optimization>(
                 K(2, "Naive Optimized -- Project Euler"), S(4'000'000ll),
                 K(2, "Naive Optimized -- Unbound"), S(Param<int64_t>("UpTo")))
             .Register<P3>(

@@ -35,7 +35,7 @@ namespace euler
     /// <summary>
     /// A parameter in the schema which is already bound.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">The type of the bound value within.</typeparam>
     template <typename T>
     struct Bind
     {
