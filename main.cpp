@@ -8,47 +8,21 @@
 #include "problems.hpp"
 #include "Sieve.hpp"
 #include "Solver.hpp"
+#include "Executor.hpp"
 #include "KeyedSchemaRouter.hpp"
+#include "ParameterResolver.hpp"
 
 #include <cxxopts.hpp>
-
 
 using namespace euler;
 
 namespace
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    class CinParameterResolver
-    {
-    public:
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="p_param"></param>
-        /// <returns></returns>
-        template <typename T>
-        T operator()(Param<T> p_param)
-        {
-            T in;
-            std::cout << "Please input parameter with name " << p_param.m_name << ": ";
-            std::cin >> in;
-            return in;
-        }
-    };
-
-    struct StaticExecutor
-    {
-        template <auto V, typename... Ts>
-        auto operator()(Ts&&... p_ts)
-        {
-            return V(std::forward<Ts>(p_ts)...);
-        }
-    };
-
-    using SolutionRouter = KeyedSchemaRouter<Key<uint32_t, std::string>, int64_t, CinParameterResolver, StaticExecutor>;
+    using SolutionRouter = KeyedSchemaRouter<
+        Key<uint32_t, std::string>,
+        int64_t,
+        euler::CinParameterResolver,
+        euler::StaticExecutor>;
 
     /// <summary>
     /// 

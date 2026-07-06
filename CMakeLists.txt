@@ -43,6 +43,7 @@ FetchContent_MakeAvailable(magnesium cxxopts Catch2)
 # Add source to this project's executable.
 add_executable(
     euler-cpp
+    "cpp.hint"
     "main.cpp"
     "problems/src/1.cpp"
     "problems/src/2.cpp"
@@ -69,7 +70,7 @@ include(Catch)
 
 add_executable(
     tests
-    "lib/test/test_router.cpp")
+    "lib/test/test_keyed_schema_router.cpp")
 
 catch_discover_tests(tests)
 
