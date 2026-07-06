@@ -3,52 +3,26 @@
 #include <iostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "problems.hpp"
 #include "Sieve.hpp"
 #include "Solver.hpp"
+#include "Executor.hpp"
 #include "KeyedSchemaRouter.hpp"
+#include "ParameterResolver.hpp"
 
 #include <cxxopts.hpp>
-
-#include <vector>
 
 using namespace euler;
 
 namespace
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    class CinParameterResolver
-    {
-    public:
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="p_param"></param>
-        /// <returns></returns>
-        template <typename T>
-        T operator()(Param<T> p_param)
-        {
-            T in;
-            std::cout << "Please input parameter with name " << p_param.m_name << ": ";
-            std::cin >> in;
-            return in;
-        }
-    };
-
-    struct StaticExecutor
-    {
-        template <auto V, typename... Ts>
-        auto operator()(Ts&&... p_ts)
-        {
-            return V(std::forward<Ts>(p_ts)...);
-        }
-    };
-
-    using SolutionRouter = KeyedSchemaRouter<Key<uint32_t, std::string>, int64_t, CinParameterResolver, StaticExecutor>;
+    using SolutionRouter = KeyedSchemaRouter<
+        Key<uint32_t, std::string>,
+        int64_t,
+        euler::CinParameterResolver,
+        euler::StaticExecutor>;
 
     /// <summary>
     /// 
@@ -65,7 +39,7 @@ namespace
             .Register<P2Naive>(
                 K(2, "Naive -- Project Euler"), S(4'000'000ll),
                 K(2, "Naive -- Unbound"), S(Param<int64_t>("UpTo")))
-            .Register<P2Optimization1>(
+            .Register<P2Optimization>(
                 K(2, "Naive Optimized -- Project Euler"), S(4'000'000ll),
                 K(2, "Naive Optimized -- Unbound"), S(Param<int64_t>("UpTo")))
             .Register<P3>(

@@ -35,7 +35,7 @@ namespace euler
     /// <summary>
     /// A parameter in the schema which is already bound.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">The type of the bound value within.</typeparam>
     template <typename T>
     struct Bind
     {
@@ -91,21 +91,12 @@ namespace euler
                 std::declval<Fn>(),
                 std::declval<decltype(Deschemify<Key, Schema>())>()));
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <typeparam name="ParameterResolver"></typeparam>
-        /// <typeparam name="...SchemaSpecs"></typeparam>
-        /// <param name="p_resolver"></param>
-        /// <param name="...p_schemaSpecs"></param>
-        /// <returns></returns>
-        template <typename ParameterResolver, typename Key, typename Fn, typename Schema>
+        template <typename ParameterResolver, typename Key, typename Schema, typename Fn>
         auto CreateExecutable(
             ParameterResolver& p_resolver,
             const Key& p_key,
-            Fn&& p_fn,
-            Schema&& p_schema) -> std::function<SchemaExecResult<Fn, Key, Schema>()>
+            Schema&& p_schema,
+            Fn&& p_fn) -> std::function<SchemaExecResult<Fn, Key, Schema>()>
         {
             // Use decltype instead of Schema so that warning about not using p_schema is avoided.
             if constexpr (std::tuple_size_v<std::remove_cvref_t<decltype(p_schema)>> == 0)
@@ -243,14 +234,14 @@ namespace euler
         /// specified schema for the creation of the concrete type.
         /// </summary>
         /// <typeparam name="LookupKey">The key to add this schema instance under.</typeparam>
+        /// <typeparam name="Schema">The schema the key is being bound to.</typeparam>
         /// <typeparam name="Fn">The function that this is routing to.</typeparam>
-        /// <typeparam name="...SchemaSpecs">The types of the parameters that define the schema.</typeparam>
         /// <param name="p_key">The actual key instance to add an entry for.</param>
-        /// <param name="...p_schemaSpecs">The different schema specifications (one of Param, Bind, etc) which
+        /// <param name="p_schema">The schema specifications (instances of Param, Bind, etc) which
         /// detail how this type should be created at runtime for this key.</param>
         /// <returns>This router instance to allow for a builder interface.</returns>
-        template <typename LookupKey, typename Fn, typename Schema>
-        KeyedSchemaRouter& Add(LookupKey&& p_key, Fn&& p_fn, Schema&& p_schema)
+        template <typename LookupKey, typename Schema, typename Fn>
+        KeyedSchemaRouter& Add(LookupKey&& p_key, Schema&& p_schema, Fn&& p_fn)
         {
             // Use emplace over try_emplace for the following reasons:
             //   * Insertion failures are expected to be very rare and cause an exception anyway so the unnecessary cost
@@ -271,13 +262,14 @@ namespace euler
             auto exec = detail::CreateExecutable(
                 m_resolver,
                 it->first,
-                std::forward<Fn>(p_fn),
-                std::forward<Schema>(p_schema));
+                std::forward<Schema>(p_schema),
+                std::forward<Fn>(p_fn));
             it->second = std::move(exec);
 
             return *this;
         }
 
+        /*
         template <typename T, typename... Ts>
         KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
@@ -290,27 +282,30 @@ namespace euler
 
                 Add(
                     std::forward<decltype(p_key)>(p_key),
-                    curried,
-                    std::forward<decltype(p_schema)>(p_schema));
+                    std::forward<decltype(p_schema)>(p_schema),
+                    curried);
             }, std::forward<Ts>(p_ts)...);
 
             return *this;
         }
+        */
 
         template <auto V, typename... Ts>
         KeyedSchemaRouter& Register(Ts&&... p_ts)
         {
             mg::iter_n<2>([this](auto&& p_key, auto&& p_schema)
             {
+				/*
                 auto curried = [this](auto&&... p_args)
                 {
                     return m_registrar.template operator()<V>(std::forward<decltype(p_args)>(p_args)...);
                 };
+                */
 
                 Add(
                     std::forward<decltype(p_key)>(p_key),
-                    curried,
-                    std::forward<decltype(p_schema)>(p_schema));
+                    std::forward<decltype(p_schema)>(p_schema),
+                    V);
             }, std::forward<Ts>(p_ts)...);
 
             return *this;

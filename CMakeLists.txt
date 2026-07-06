@@ -3,6 +3,9 @@
 #
 cmake_minimum_required(VERSION 3.29)
 
+project("euler-cpp" DESCRIPTION "A suite of solutions to Project Euler problems."
+                    LANGUAGES CXX)
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
@@ -22,18 +25,25 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/jarro2783/cxxopts
     GIT_TAG c8c932f891a559a099198ec4a1fccf6110d6463a
 )
-FetchContent_MakeAvailable(magnesium cxxopts)
+FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.15.1
+)
+FetchContent_MakeAvailable(magnesium cxxopts Catch2)
 
 # These warning options also surface issues from the system headers which are undesirable in the normal build.
 # Only enable when doing in-depth linting.
 # add_compile_options(/w34365)
 
-project("euler-cpp" DESCRIPTION "A suite of solutions to Project Euler problems."
-                    LANGUAGES CXX)
+#
+# Main executable target setup
+#
 
 # Add source to this project's executable.
 add_executable(
     euler-cpp
+    "cpp.hint"
     "main.cpp"
     "problems/src/1.cpp"
     "problems/src/2.cpp"
@@ -51,3 +61,23 @@ target_link_libraries(euler-cpp PRIVATE
 
 target_compile_features(euler-cpp PRIVATE cxx_std_20)
 set_target_properties(euler-cpp PROPERTIES CXX_EXTENSIONS OFF)
+
+#
+# Test target setup
+#
+include(CTest)
+include(Catch)
+
+add_executable(
+    tests
+    "lib/test/test_keyed_schema_router.cpp")
+
+catch_discover_tests(tests)
+
+target_include_directories(tests PRIVATE lib/inc)
+target_link_libraries(tests PRIVATE
+    Catch2::Catch2WithMain
+    magnesium)
+
+target_compile_features(tests PRIVATE cxx_std_20)
+set_target_properties(tests PROPERTIES CXX_EXTENSIONS OFF)
